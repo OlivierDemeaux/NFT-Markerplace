@@ -25,12 +25,38 @@ contract Market {
         uint price;
     }
 
+    event Listed(
+        uint listingId,
+        address seller,
+        address token,
+        uint tokenId,
+        uint price
+    );
+
+    event Sale(
+        uint listingId,
+        address buyer,
+        address token,
+        uint tokenId,
+        uint price
+    );
+
+    event Cancel(
+        uint listingId,
+        address seller
+    );
+
     mapping (uint => Listing) private _listings;
    
    function listToken(address token, uint tokenId, uint price) public {
        IERC721(token).transferFrom(msg.sender, address(this), tokenId);
        _listings[_listingCounter.current()] = Listing(ListingStatus.Active, msg.sender, token,tokenId,price);
+       emit Listed(_listingCounter.current(), msg.sender, token, tokenId, price);
        _listingCounter.increment();
+   }
+
+   function getListing(uint listingId) public view returns(Listing memory) {
+       return(_listings[listingId]);
    }
 
    function buyToken(uint listingId) public payable {
@@ -41,6 +67,7 @@ contract Market {
 
        IERC721(listing.token).transferFrom(address(this), msg.sender, listing.tokenId);
        payable(listing.seller).transfer(listing.price);
+       emit Sale(listingId, msg.sender, listing.token, listing.tokenId, listing.price);
    }
 
    function cancelListing(uint listingId) public {
@@ -49,5 +76,6 @@ contract Market {
        require(listing.status == ListingStatus.Active, "Listing is not active");
 
        listing.status = ListingStatus.Canceled;
+       emit Cancel(listingId, msg.sender);
    }
 }
